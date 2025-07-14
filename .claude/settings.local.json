@@ -9,7 +9,10 @@
       "Bash(node server.js)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)"
     ],
     "deny": []
   }

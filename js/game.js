@@ -11,6 +11,7 @@ class Game {
     constructor() {
         this.players = [];
         this.currentPlayerIndex = 0;
+        this.startingPlayerIndex = 0; // Track who starts each round
         this.deck = new Deck();
         this.discardPile = [];
         this.gameState = 'waiting'; // waiting, playing, round_end, game_over
@@ -93,8 +94,11 @@ class Game {
             }
         });
         
-        // Find first player who isn't out
-        this.currentPlayerIndex = 0;
+        // Rotate starting player for new round
+        this.startingPlayerIndex = (this.startingPlayerIndex + 1) % this.players.length;
+        
+        // Find first player who isn't out, starting from the designated starting player
+        this.currentPlayerIndex = this.startingPlayerIndex;
         while (this.players[this.currentPlayerIndex].isOut) {
             this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
         }
