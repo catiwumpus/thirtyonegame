@@ -390,7 +390,7 @@ class UIManager {
         console.log('updateGameUI called with gameState:', gameState);
         this.gameState = gameState;
         this.selectedCardIndex = -1;
-        this.hasDrawn = false;
+        this.hasDrawn = gameState.currentPlayerHasDrawn || false;
         
         this.updatePlayerAreas(gameState);
         this.updateCenterArea(gameState);

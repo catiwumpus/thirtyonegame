@@ -19,6 +19,7 @@ class Game {
         this.knocker = null;
         this.finalRound = false;
         this.lastPlayerIndex = null;
+        this.currentPlayerHasDrawn = false; // Track if current player has drawn this turn
     }
 
     addPlayer(playerId, name) {
@@ -75,6 +76,7 @@ class Game {
         this.knocker = null;
         this.finalRound = false;
         this.lastPlayerIndex = null;
+        this.currentPlayerHasDrawn = false;
         
         console.log('Knock state reset - finalRound:', this.finalRound, 'knocker:', this.knocker);
         
@@ -142,33 +144,35 @@ class Game {
 
     playerDrawFromDeck(playerId) {
         const player = this.players.find(p => p.id === playerId);
-        if (!player || player.id !== this.getCurrentPlayer().id) {
+        if (!player || player.id !== this.getCurrentPlayer().id || this.currentPlayerHasDrawn) {
             return null;
         }
         
         const card = this.drawFromDeck();
         if (card) {
             player.hand.addCard(card);
+            this.currentPlayerHasDrawn = true;
         }
         return card;
     }
 
     playerDrawFromDiscard(playerId) {
         const player = this.players.find(p => p.id === playerId);
-        if (!player || player.id !== this.getCurrentPlayer().id || this.discardPile.length === 0) {
+        if (!player || player.id !== this.getCurrentPlayer().id || this.discardPile.length === 0 || this.currentPlayerHasDrawn) {
             return null;
         }
         
         const card = this.drawFromDiscard();
         if (card) {
             player.hand.addCard(card);
+            this.currentPlayerHasDrawn = true;
         }
         return card;
     }
 
     playerDiscardCard(playerId, cardIndex) {
         const player = this.players.find(p => p.id === playerId);
-        if (!player || player.id !== this.getCurrentPlayer().id) {
+        if (!player || player.id !== this.getCurrentPlayer().id || !this.currentPlayerHasDrawn) {
             return false;
         }
         
@@ -208,6 +212,9 @@ class Game {
 
     nextTurn() {
         console.log('nextTurn called - current player:', this.currentPlayerIndex, 'finalRound:', this.finalRound, 'lastPlayerIndex:', this.lastPlayerIndex);
+        
+        // Reset the draw flag for the new turn
+        this.currentPlayerHasDrawn = false;
         
         do {
             this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
@@ -334,7 +341,8 @@ class Game {
             gameState: this.gameState,
             roundNumber: this.roundNumber,
             knocker: this.knocker ? this.knocker.id : null,
-            finalRound: this.finalRound
+            finalRound: this.finalRound,
+            currentPlayerHasDrawn: this.currentPlayerHasDrawn
         };
     }
 
