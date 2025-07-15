@@ -121,6 +121,12 @@ class Router {
             networking.leaveRoom();
         }
         
+        // Clean up any existing modals
+        const existingModal = document.querySelector('.game-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
         // Clear form inputs
         const playerNameInput = document.getElementById('player-name');
         const roomCodeInput = document.getElementById('room-code');
