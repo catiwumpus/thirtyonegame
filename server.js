@@ -287,6 +287,16 @@ io.on('connection', (socket) => {
             }
         }
         
+        // Check for duplicate name among active players
+        if (!existingPlayer) {
+            for (const [playerId, player] of room.players) {
+                if (player.name === playerName && !player.disconnected) {
+                    socket.emit('joinRoomResult', { success: false, error: 'Player with this name already exists' });
+                    return;
+                }
+            }
+        }
+        
         if (existingPlayer) {
             // Reconnecting player
             console.log(`Player ${playerName} reconnecting to room ${roomCode}`);
