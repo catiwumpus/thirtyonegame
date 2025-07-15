@@ -101,11 +101,17 @@ class UIManager {
 
         networking.on('playerLeft', (data) => {
             this.updateLobby(data);
+            // If we were the one who left, navigate to landing
+            if (!networking.getRoomInfo()) {
+                router.navigate('/');
+            }
         });
 
         networking.on('gameStarted', (data) => {
-            this.showPage('game-page');
-            this.updateGameUI(data.gameState);
+            const roomInfo = networking.getRoomInfo();
+            if (roomInfo) {
+                router.navigate(`/game/${roomInfo.code}`);
+            }
         });
 
         networking.on('gameStateUpdate', (data) => {
@@ -122,27 +128,48 @@ class UIManager {
             this.showGameOverScreen(data);
         });
 
+        // Handle host migration and reconnection events
+        networking.on('hostMigrated', (data) => {
+            if (data.newHostId === networking.getPlayerId()) {
+                this.showToast(`You are now the host! ${data.disconnectedPlayer} disconnected.`, 5000);
+            } else {
+                this.showToast(`${data.newHostName} is now the host. ${data.disconnectedPlayer} disconnected.`, 5000);
+            }
+            // Update lobby UI if on lobby page
+            if (this.currentPage === 'lobby-page') {
+                this.updateLobby({
+                    players: networking.players,
+                    canStart: networking.players.length >= 2
+                });
+            }
+        });
+
+        networking.on('playerDisconnected', (data) => {
+            this.showToast(`${data.playerName} disconnected from the game.`, 3000);
+        });
+
+        networking.on('playerReconnected', (data) => {
+            this.showToast(`${data.playerName} reconnected to the game.`, 3000);
+            // Update lobby UI if on lobby page
+            if (this.currentPage === 'lobby-page') {
+                this.updateLobby({
+                    players: data.players,
+                    canStart: data.players.length >= 2
+                });
+            }
+        });
+
         // Handle room creation result
         networking.on('roomCreated', (data) => {
             if (data.success) {
-                this.showPage('lobby-page');
-                this.updateLobbyInfo(data.roomCode);
-                this.updateLobby({ 
-                    players: data.players, 
-                    canStart: data.players.length >= 2 
-                });
+                router.navigate(`/lobby/${data.roomCode}`);
             }
         });
 
         // Handle join room result
         networking.on('joinRoomResult', (data) => {
             if (data.success) {
-                this.showPage('lobby-page');
-                this.updateLobbyInfo(data.roomCode);
-                this.updateLobby({ 
-                    players: data.players, 
-                    canStart: data.players.length >= 2 
-                });
+                router.navigate(`/lobby/${data.roomCode}`);
             } else {
                 this.showToast(data.error);
             }
@@ -293,6 +320,26 @@ class UIManager {
         }
     }
 
+    // Called by router when navigating to lobby
+    initializeLobbyPage(roomCode) {
+        this.updateLobbyInfo(roomCode);
+        const roomInfo = networking.getRoomInfo();
+        if (roomInfo && roomInfo.code === roomCode) {
+            this.updateLobby({
+                players: networking.players,
+                canStart: networking.players.length >= 2
+            });
+        }
+    }
+
+    // Called by router when navigating to game
+    initializeGamePage() {
+        const gameState = networking.getGameState();
+        if (gameState) {
+            this.updateGameUI(gameState);
+        }
+    }
+
     updateLobby(data) {
         const playersList = document.getElementById('players-ul');
         const playerCount = document.getElementById('player-count');
@@ -326,9 +373,7 @@ class UIManager {
 
     handleLeaveRoom() {
         networking.leaveRoom();
-        this.showPage('landing-page');
-        document.getElementById('player-name').value = '';
-        document.getElementById('room-code').value = '';
+        router.navigate('/');
     }
 
     copyRoomCode() {
@@ -599,7 +644,7 @@ class UIManager {
             message += `<h3>Game Complete</h3>`;
         }
         message += `<p>Final Round: ${finalRound}</p>`;
-        message += `<button onclick="location.reload()" class="restart-btn">Play Again</button>`;
+        message += `<button onclick="router.navigate('/')" class="restart-btn">Play Again</button>`;
         
         this.showModal(message, 0); // Don't auto-close
     }

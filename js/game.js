@@ -47,6 +47,15 @@ class Game {
         }
     }
 
+    reconnectPlayer(oldPlayerId, newPlayerId) {
+        // Update player ID in the game state
+        const playerIndex = this.players.findIndex(player => player.id === oldPlayerId);
+        if (playerIndex !== -1) {
+            this.players[playerIndex].id = newPlayerId;
+            console.log(`Game: Updated player ID from ${oldPlayerId} to ${newPlayerId}`);
+        }
+    }
+
     startGame() {
         if (this.players.length < 2) {
             return false;
