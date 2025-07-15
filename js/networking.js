@@ -9,6 +9,8 @@ class NetworkingManager {
         this.isHost = false;
         this.players = [];
         this.gameState = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
         
         this.connect();
     }
@@ -21,11 +23,18 @@ class NetworkingManager {
             console.log('Connected to server');
             this.connected = true;
             this.playerId = this.socket.id;
+            this.reconnectAttempts = 0;
+            
+            // Try to restore session if available
+            this.handleReconnection();
         });
         
         this.socket.on('disconnect', () => {
             console.log('Disconnected from server');
             this.connected = false;
+            
+            // Try to reconnect if we have session data
+            this.attemptReconnection();
         });
         
         // Room events
@@ -35,6 +44,7 @@ class NetworkingManager {
             this.playerId = data.playerId;
             this.isHost = data.isHost;
             this.players = data.players;
+            this.updateSessionData();
             this.emit('roomCreated', data);
         });
         
@@ -45,6 +55,7 @@ class NetworkingManager {
                 this.playerId = data.playerId;
                 this.isHost = data.isHost;
                 this.players = data.players;
+                this.updateSessionData();
             }
             this.emit('joinRoomResult', data);
         });
@@ -52,6 +63,7 @@ class NetworkingManager {
         this.socket.on('playerJoined', (data) => {
             console.log('Player joined:', data);
             this.players = data.players;
+            this.updateSessionData();
             this.emit('playerJoined', data);
         });
         
@@ -68,6 +80,7 @@ class NetworkingManager {
         this.socket.on('gameStarted', (data) => {
             console.log('Game started:', data);
             this.gameState = data.gameState;
+            this.updateSessionData();
             this.emit('gameStarted', data);
         });
         
@@ -107,6 +120,26 @@ class NetworkingManager {
         this.socket.on('gameOver', (data) => {
             console.log('gameOver event received:', data);
             this.emit('gameOver', data);
+        });
+
+        // Host migration and reconnection events
+        this.socket.on('hostMigrated', (data) => {
+            console.log('Host migrated:', data);
+            if (data.newHostId === this.playerId) {
+                this.isHost = true;
+            }
+            this.emit('hostMigrated', data);
+        });
+
+        this.socket.on('playerDisconnected', (data) => {
+            console.log('Player disconnected:', data);
+            this.emit('playerDisconnected', data);
+        });
+
+        this.socket.on('playerReconnected', (data) => {
+            console.log('Player reconnected:', data);
+            this.players = data.players;
+            this.emit('playerReconnected', data);
         });
     }
 
@@ -161,6 +194,9 @@ class NetworkingManager {
         this.isHost = false;
         this.players = [];
         this.gameState = null;
+        
+        // Clear session data
+        this.clearSession();
         
         return { success: true };
     }
@@ -240,6 +276,80 @@ class NetworkingManager {
 
     isConnected() {
         return this.socket && this.socket.connected;
+    }
+
+    // Session management methods
+    updateSessionData() {
+        if (this.roomCode) {
+            const sessionData = {
+                roomCode: this.roomCode,
+                playerName: this.getPlayerName(),
+                isHost: this.isHost,
+                gameState: this.gameState?.gameState || 'waiting',
+                timestamp: Date.now()
+            };
+            localStorage.setItem('gameSession', JSON.stringify(sessionData));
+            console.log('Session data updated:', sessionData);
+        }
+    }
+
+    getPlayerName() {
+        // Get player name from current players list
+        if (this.playerId && this.players) {
+            const player = this.players.find(p => p.id === this.playerId);
+            return player ? player.name : null;
+        }
+        return null;
+    }
+
+    handleReconnection() {
+        const sessionData = this.getSessionData();
+        if (sessionData && this.isSessionValid(sessionData)) {
+            console.log('Attempting to restore session:', sessionData);
+            
+            // Only auto-rejoin if we're on a lobby or game page (not landing page)
+            const currentPath = window.location.pathname;
+            if (currentPath.startsWith('/lobby/') || currentPath.startsWith('/game/')) {
+                // Try to rejoin the room
+                this.joinRoom(sessionData.roomCode, sessionData.playerName);
+            }
+        }
+    }
+
+    attemptReconnection() {
+        const sessionData = this.getSessionData();
+        if (sessionData && this.isSessionValid(sessionData) && this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            console.log(`Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            
+            setTimeout(() => {
+                if (!this.connected) {
+                    this.connect();
+                }
+            }, 1000 * this.reconnectAttempts);
+        }
+    }
+
+    getSessionData() {
+        try {
+            const data = localStorage.getItem('gameSession');
+            return data ? JSON.parse(data) : null;
+        } catch (error) {
+            console.error('Error parsing session data:', error);
+            return null;
+        }
+    }
+
+    isSessionValid(sessionData) {
+        // Session is valid if it's less than 1 hour old
+        const sessionAge = Date.now() - sessionData.timestamp;
+        const maxAge = 60 * 60 * 1000; // 1 hour in milliseconds
+        return sessionAge < maxAge;
+    }
+
+    clearSession() {
+        localStorage.removeItem('gameSession');
+        console.log('Session data cleared');
     }
 }
 
