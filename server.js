@@ -18,6 +18,11 @@ const io = socketIo(server, {
 // Serve static files
 app.use(express.static('.'));
 
+// Catch-all handler for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Game state
 const rooms = new Map();
 const playerToRoom = new Map();
