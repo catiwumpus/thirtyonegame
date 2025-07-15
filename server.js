@@ -147,9 +147,11 @@ function handlePlayerReconnection(socket, roomCode, room, existingPlayer) {
     
     console.log(`Reconnecting player ${player.name} with new socket ${socket.id}`);
     
-    // If player was active, disconnect the old socket
+    // If player was active, disconnect the old socket gracefully
     if (!player.disconnected && player.socket) {
         console.log(`Disconnecting old socket ${oldPlayerId} for player ${player.name}`);
+        // Remove from playerToRoom mapping first to prevent disconnect handler from triggering
+        playerToRoom.delete(oldPlayerId);
         player.socket.disconnect();
     }
     
@@ -158,8 +160,10 @@ function handlePlayerReconnection(socket, roomCode, room, existingPlayer) {
     player.disconnected = false;
     player.disconnectTime = null;
     
-    // Update player to room mapping with new socket id
-    playerToRoom.delete(oldPlayerId);
+    // Update player to room mapping with new socket id (if not already deleted)
+    if (playerToRoom.has(oldPlayerId)) {
+        playerToRoom.delete(oldPlayerId);
+    }
     playerToRoom.set(socket.id, roomCode);
     
     // Update room players map with new socket id
@@ -172,6 +176,7 @@ function handlePlayerReconnection(socket, roomCode, room, existingPlayer) {
     // Update host if this player was the host
     if (room.host === oldPlayerId) {
         room.host = socket.id;
+        player.isHost = true;
     }
     
     // Update game player references
