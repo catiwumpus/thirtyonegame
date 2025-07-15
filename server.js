@@ -147,6 +147,12 @@ function handlePlayerReconnection(socket, roomCode, room, existingPlayer) {
     
     console.log(`Reconnecting player ${player.name} with new socket ${socket.id}`);
     
+    // If player was active, disconnect the old socket
+    if (!player.disconnected && player.socket) {
+        console.log(`Disconnecting old socket ${oldPlayerId} for player ${player.name}`);
+        player.socket.disconnect();
+    }
+    
     // Update player with new socket and clear disconnected status
     player.socket = socket;
     player.disconnected = false;
@@ -278,22 +284,12 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // Check for reconnection of existing player
+        // Check for reconnection of existing player (disconnected or active)
         let existingPlayer = null;
         for (const [playerId, player] of room.players) {
-            if (player.name === playerName && player.disconnected) {
+            if (player.name === playerName) {
                 existingPlayer = { id: playerId, player: player };
                 break;
-            }
-        }
-        
-        // Check for duplicate name among active players
-        if (!existingPlayer) {
-            for (const [playerId, player] of room.players) {
-                if (player.name === playerName && !player.disconnected) {
-                    socket.emit('joinRoomResult', { success: false, error: 'Player with this name already exists' });
-                    return;
-                }
             }
         }
         
