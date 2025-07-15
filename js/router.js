@@ -156,14 +156,22 @@ class Router {
         
         const currentRoom = networking.getRoomInfo();
         
-        // If we're not in the correct room or game isn't started, redirect
+        // If we're not in the correct room, try to rejoin it
         if (!currentRoom || currentRoom.code !== roomCode) {
-            console.log('Not in correct room, redirecting to landing');
-            this.navigate('/', true);
-            return;
+            // Check if we have session data for this room
+            const sessionData = networking.getSessionData();
+            if (sessionData && sessionData.roomCode === roomCode && sessionData.playerName) {
+                console.log('Attempting to rejoin room from session data');
+                networking.joinRoom(roomCode, sessionData.playerName);
+            } else {
+                console.log('No valid session for this room, redirecting to landing');
+                this.navigate('/', true);
+                return;
+            }
         }
         
-        if (currentRoom.gameState === 'waiting') {
+        // If we have room info but game is waiting, redirect to lobby
+        if (currentRoom && currentRoom.gameState === 'waiting') {
             console.log('Game not started, redirecting to lobby');
             this.navigate(`/lobby/${roomCode}`, true);
             return;
