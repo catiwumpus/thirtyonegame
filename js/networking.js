@@ -307,9 +307,9 @@ class NetworkingManager {
         if (sessionData && this.isSessionValid(sessionData)) {
             console.log('Attempting to restore session:', sessionData);
             
-            // Only auto-rejoin if we're not on the landing page
+            // Only auto-rejoin if we're on a lobby or game page (not landing page)
             const currentPath = window.location.pathname;
-            if (currentPath !== '/') {
+            if (currentPath.startsWith('/lobby/') || currentPath.startsWith('/game/')) {
                 // Try to rejoin the room
                 this.joinRoom(sessionData.roomCode, sessionData.playerName);
             }
