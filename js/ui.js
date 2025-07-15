@@ -550,7 +550,7 @@ class UIManager {
     updateActionButtons(gameState) {
         const isMyTurn = gameState.currentPlayerIndex === gameState.players.findIndex(p => p.id === networking.getPlayerId());
         
-        document.getElementById('knock-btn').disabled = !isMyTurn || this.hasDrawn;
+        document.getElementById('knock-btn').disabled = !isMyTurn || this.hasDrawn || gameState.finalRound;
         document.getElementById('draw-deck-btn').disabled = !isMyTurn || this.hasDrawn;
         document.getElementById('draw-discard-btn').disabled = !isMyTurn || this.hasDrawn || !gameState.topDiscardCard;
         

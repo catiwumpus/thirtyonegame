@@ -201,6 +201,12 @@ class Game {
             return false;
         }
         
+        // Prevent knocking if final round has already started
+        if (this.finalRound) {
+            console.log('Knock rejected - final round already started');
+            return false;
+        }
+        
         console.log(`Player ${player.name} knocked! Starting final round. Current player index: ${this.currentPlayerIndex}`);
         this.knocker = player;
         this.finalRound = true;
