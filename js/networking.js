@@ -307,8 +307,12 @@ class NetworkingManager {
         if (sessionData && this.isSessionValid(sessionData)) {
             console.log('Attempting to restore session:', sessionData);
             
-            // Try to rejoin the room
-            this.joinRoom(sessionData.roomCode, sessionData.playerName);
+            // Only auto-rejoin if we're not on the landing page
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/') {
+                // Try to rejoin the room
+                this.joinRoom(sessionData.roomCode, sessionData.playerName);
+            }
         }
     }
 
