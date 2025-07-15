@@ -4,6 +4,7 @@ class UIManager {
         this.gameState = null;
         this.selectedCardIndex = -1;
         this.hasDrawn = false;
+        this.actionText = '';
         
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
@@ -115,6 +116,7 @@ class UIManager {
         });
 
         networking.on('gameStateUpdate', (data) => {
+            this.updateActionText(data);
             this.updateGameUI(data.gameState);
         });
 
@@ -386,6 +388,47 @@ class UIManager {
     }
 
     // Game page handlers
+    updateActionText(data) {
+        if (!data.gameState) return;
+        
+        // If there's no action or playerId, this is just a state update (new turn)
+        if (!data.action || !data.playerId) {
+            const currentPlayer = data.gameState.players[data.gameState.currentPlayerIndex];
+            this.actionText = `${currentPlayer.name}'s turn`;
+            return;
+        }
+        
+        const player = data.gameState.players.find(p => p.id === data.playerId);
+        if (!player) return;
+        
+        switch (data.action) {
+            case 'drawFromDeck':
+                this.actionText = `${player.name} drew a card from the deck`;
+                break;
+            case 'drawFromDiscard':
+                this.actionText = `${player.name} drew a card from the discard pile`;
+                break;
+            case 'discardCard':
+                const topCard = data.gameState.topDiscardCard;
+                if (topCard) {
+                    this.actionText = `${player.name} discarded ${this.getCardName(topCard)}`;
+                } else {
+                    this.actionText = `${player.name} discarded a card`;
+                }
+                break;
+            case 'knock':
+                this.actionText = `${player.name} knocked!`;
+                break;
+            default:
+                this.actionText = `${player.name}'s turn`;
+        }
+    }
+    
+    getCardName(card) {
+        if (!card) return 'a card';
+        return `${card.rank} of ${card.suit}`;
+    }
+    
     updateGameUI(gameState) {
         console.log('updateGameUI called with gameState:', gameState);
         this.gameState = gameState;
@@ -535,8 +578,9 @@ class UIManager {
         const centerTurnIndicator = document.getElementById('center-turn-indicator');
         const roundDisplay = document.getElementById('round-display');
         
+        // Use action text if available, otherwise default to current player's turn
         const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-        const turnText = `${currentPlayer.name}'s Turn`;
+        const turnText = this.actionText || `${currentPlayer.name}'s Turn`;
         
         centerTurnIndicator.textContent = turnText;
         
